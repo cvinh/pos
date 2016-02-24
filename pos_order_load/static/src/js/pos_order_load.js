@@ -17,20 +17,15 @@
 
 odoo.define('pos_order_load', function (require) {
 "use strict";
-//openerp.pos_order_load = function(instance, local) {
     var models = require('point_of_sale.models');
     var PosBaseWidget = require('point_of_sale.BaseWidget');
     var chrome = require('point_of_sale.chrome');
     var gui = require('point_of_sale.gui');
     var screens = require('point_of_sale.screens');
     var core = require('web.core');
-    //module = instance.point_of_sale;
     var QWeb = core.qweb;
-    //var QWeb = instance.web.qweb;
     var _t = core._t;
-    //var _t = instance.web._t;
     var round_pr = core.round_precision;
-    //var round_pr = instance.web.round_precision;
 
     /*************************************************************************
         Extend Model Order:
@@ -61,8 +56,7 @@ odoo.define('pos_order_load', function (require) {
             var self = this;
             this._super();
             this.$el.click(function(){
-                var ss = self.pos.pos_widget.screen_selector;
-                ss.set_current_screen('orderlist');
+                this.gui.show_screen('orderlist');
             });
         },
     });
@@ -78,7 +72,7 @@ odoo.define('pos_order_load', function (require) {
             var self = this;
             this._super();
             this.$el.click(function(){
-                self.pos.pos_widget.screen_selector.show_popup('confirm',{
+                self.gui.show_popup('confirm',{
                     message: _t('Save The current Order ?'),
                     comment: _t('This operation will save the current order in a draft state. You\'ll have to mark it as paid after.'),
                     confirm: function(){
@@ -97,7 +91,7 @@ odoo.define('pos_order_load', function (require) {
             * Create new screen;
             * Add load and save button;
     */
-    var Chrome = chrome.Chrome.extend({
+    chrome = chrome.Chrome.extend({
         build_widgets: function() {
             console.log();
             this._super();
@@ -107,12 +101,12 @@ odoo.define('pos_order_load', function (require) {
             this.orderlist_screen.appendTo(this.$('.screens'));
             this.orderlist_screen.hide();
 
-            this.screen_selector.screen_set['orderlist'] =
+            this.gui.show_screen['orderlist'] =
                 this.orderlist_screen;
 
             // Add buttons
             this.load_button = new LoadButtonWidget(this,{});
-            this.load_button.appendTo(this.chrome.$('li.orderline.empty'));
+            this.load_button.appendTo(this.chrome.$('div.order-empty'));
 
             this.save_button = new SaveButtonWidget(this,{});
 
@@ -129,7 +123,7 @@ odoo.define('pos_order_load', function (require) {
             this._super(scrollbottom);
             if (this.chrome.load_button) {
                 this.chrome.load_button.appendTo(
-                    this.chrome.$('li.orderline.empty')
+                    this.chrome.$('div.order-empty')
                 );
             }
             if (this.chrome.save_button && (this.pos.get('selectedOrder').get('orderLines').length > 0)) {
@@ -165,22 +159,19 @@ odoo.define('pos_order_load', function (require) {
         },
 
         start: function() {
+            console.log();
             var self = this;
             this._super();
             this.$el.find('span.button.back').click(function(){
                 order = self.pos.get('selectedOrder');
                 self.reset_order(order);
                 self.screens.order_widget.change_selected_order();
-                //var ss = self.pos.chrome.screen_selector;
-                //ss.set_current_screen('products');
                 self.gui.show_screen('products');
             });
             this.$el.find('span.button.validate').click(function(){
                 var orderModel = new instance.web.Model('pos.order');
                 return orderModel.call('unlink', [[self.current_order_id]])
                 .then(function (result) {
-                    //var ss = self.pos.chrome.screen_selector;
-                    //ss.set_current_screen('products');
                     self.gui.show_screen('products');
                 }).fail(function (error, event){
                     if (parseInt(error.code) === 200) {
@@ -338,8 +329,7 @@ odoo.define('pos_order_load', function (require) {
 
         show: function() {
             this._super();
-            var ss = this.pos.pos_widget.screen_selector;
-            if (ss.get_current_screen() == 'orderlist') {
+            if (this.gui.get_current_screen() == 'orderlist') {
                 this.load_orders();
             }
         },
