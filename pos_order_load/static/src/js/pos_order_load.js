@@ -15,17 +15,27 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 
-openerp.pos_order_load = function(instance, local) {
-    module = instance.point_of_sale;
-    var QWeb = instance.web.qweb;
-    var _t = instance.web._t;
-    var round_pr = instance.web.round_precision;
+odoo.define('pos_order_load', function (require) {
+"use strict";
+//openerp.pos_order_load = function(instance, local) {
+    var models = require('point_of_sale.models');
+    var PosBaseWidget = require('point_of_sale.BaseWidget');
+    var chrome = require('point_of_sale.chrome');
+    var screens = require('point_of_sale.screens');
+    var core = require('web.core');
+    //module = instance.point_of_sale;
+    var QWeb = core.qweb;
+    //var QWeb = instance.web.qweb;
+    var _t = core._t;
+    //var _t = instance.web._t;
+    var round_pr = core.round_precision;
+    //var round_pr = instance.web.round_precision;
 
     /*************************************************************************
         Extend Model Order:
             * Add getter and setter function for field 'order_id';
     */
-    module.Order = module.Order.extend({
+    models.Order = models.Order.extend({
 
         set_order_id: function(id) {
             this.set({
@@ -43,7 +53,7 @@ openerp.pos_order_load = function(instance, local) {
         New Widget LoadButtonWidget:
             * On click, display a new screen to select draft orders;
     */
-    module.LoadButtonWidget = module.PosBaseWidget.extend({
+    var LoadButtonWidget = PosBaseWidget.extend({
         template: 'LoadButtonWidget',
 
         renderElement: function() {
@@ -60,7 +70,7 @@ openerp.pos_order_load = function(instance, local) {
         New Widget SaveButtonWidget:
             * On click, save the current draft order;
     */
-    module.SaveButtonWidget = module.PosBaseWidget.extend({
+     var SaveButtonWidget = PosBaseWidget.extend({
         template: 'SaveButtonWidget',
 
         renderElement: function() {
@@ -82,16 +92,16 @@ openerp.pos_order_load = function(instance, local) {
 
 
     /*************************************************************************
-        Extend PosWidget:
+        Extend Pos_Widget:
             * Create new screen;
             * Add load and save button;
     */
-    module.PosWidget = module.PosWidget.extend({
-        build_widgets: function() {
+    var OrderSaveLoad = screens.ActionButtonWidget.extend({
+        button_click: function() {
             this._super();
 
             // New Screen to select Draft Orders
-            this.orderlist_screen = new module.OrderListScreenWidget(this, {});
+            this.orderlist_screen = new OrderListScreenWidget(this, {});
             this.orderlist_screen.appendTo(this.$('.screens'));
             this.orderlist_screen.hide();
 
@@ -99,10 +109,10 @@ openerp.pos_order_load = function(instance, local) {
                 this.orderlist_screen;
 
             // Add buttons
-            this.load_button = new module.LoadButtonWidget(this,{});
+            this.load_button = new LoadButtonWidget(this,{});
             this.load_button.appendTo(this.pos_widget.$('li.orderline.empty'));
 
-            this.save_button = new module.SaveButtonWidget(this,{});
+            this.save_button = new SaveButtonWidget(this,{});
 
         },
     });
@@ -111,7 +121,7 @@ openerp.pos_order_load = function(instance, local) {
     /*************************************************************************
         Extend OrderWidget:
     */
-    module.OrderWidget = module.OrderWidget.extend({
+     var OrderWidget = screens.OrderWidget.extend({
         renderElement: function(scrollbottom){
             this._super(scrollbottom);
             if (this.pos_widget.load_button) {
@@ -134,7 +144,7 @@ openerp.pos_order_load = function(instance, local) {
             * on click on 'validate', allow to use this POS Order;
             * on click on 'cancel', display the preview screen;
     */
-    module.OrderListScreenWidget = module.ScreenWidget.extend({
+    var OrderListScreenWidget = screens.ScreenWidget.extend({
         template: 'OrderListScreenWidget',
         show_leftpane: true,
         model: 'pos.order',
@@ -362,4 +372,4 @@ openerp.pos_order_load = function(instance, local) {
 
     });
 
-}
+})
