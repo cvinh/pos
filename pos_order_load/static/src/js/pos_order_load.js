@@ -21,6 +21,7 @@ odoo.define('pos_order_load', function (require) {
     var models = require('point_of_sale.models');
     var PosBaseWidget = require('point_of_sale.BaseWidget');
     var chrome = require('point_of_sale.chrome');
+    var gui = require('point_of_sale.gui');
     var screens = require('point_of_sale.screens');
     var core = require('web.core');
     //module = instance.point_of_sale;
@@ -96,8 +97,9 @@ odoo.define('pos_order_load', function (require) {
             * Create new screen;
             * Add load and save button;
     */
-    var OrderSaveLoad = screens.ActionButtonWidget.extend({
-        button_click: function() {
+    var Chrome = chrome.Chrome.extend({
+        build_widgets: function() {
+            console.log();
             this._super();
 
             // New Screen to select Draft Orders
@@ -110,7 +112,7 @@ odoo.define('pos_order_load', function (require) {
 
             // Add buttons
             this.load_button = new LoadButtonWidget(this,{});
-            this.load_button.appendTo(this.pos_widget.$('li.orderline.empty'));
+            this.load_button.appendTo(this.chrome.$('li.orderline.empty'));
 
             this.save_button = new SaveButtonWidget(this,{});
 
@@ -123,15 +125,16 @@ odoo.define('pos_order_load', function (require) {
     */
      var OrderWidget = screens.OrderWidget.extend({
         renderElement: function(scrollbottom){
+            console.log();
             this._super(scrollbottom);
-            if (this.pos_widget.load_button) {
-                this.pos_widget.load_button.appendTo(
-                    this.pos_widget.$('li.orderline.empty')
+            if (this.chrome.load_button) {
+                this.chrome.load_button.appendTo(
+                    this.chrome.$('li.orderline.empty')
                 );
             }
-            if (this.pos_widget.save_button && (this.pos.get('selectedOrder').get('orderLines').length > 0)) {
-                this.pos_widget.save_button.appendTo(
-                    this.pos_widget.$('div.summary')
+            if (this.chrome.save_button && (this.pos.get('selectedOrder').get('orderLines').length > 0)) {
+                this.chrome.save_button.appendTo(
+                    this.chrome.$('div.summary')
                 );
             }
         }
@@ -167,27 +170,29 @@ odoo.define('pos_order_load', function (require) {
             this.$el.find('span.button.back').click(function(){
                 order = self.pos.get('selectedOrder');
                 self.reset_order(order);
-                self.pos_widget.order_widget.change_selected_order();
-                var ss = self.pos.pos_widget.screen_selector;
-                ss.set_current_screen('products');
+                self.screens.order_widget.change_selected_order();
+                //var ss = self.pos.chrome.screen_selector;
+                //ss.set_current_screen('products');
+                self.gui.show_screen('products');
             });
             this.$el.find('span.button.validate').click(function(){
                 var orderModel = new instance.web.Model('pos.order');
                 return orderModel.call('unlink', [[self.current_order_id]])
                 .then(function (result) {
-                    var ss = self.pos.pos_widget.screen_selector;
-                    ss.set_current_screen('products');
+                    //var ss = self.pos.chrome.screen_selector;
+                    //ss.set_current_screen('products');
+                    self.gui.show_screen('products');
                 }).fail(function (error, event){
                     if (parseInt(error.code) === 200) {
                         // Business Logic Error, not a connection problem
-                        self.pos_widget.screen_selector.show_popup(
+                        self.gui.show_popup(
                             'error-traceback', {
                                 message: error.data.message,
                                 comment: error.data.debug
                             });
                     }
                     else{
-                        self.pos_widget.screen_selector.show_popup('error',{
+                        self.gui.show_popup('error',{
                             message: _t('Connection error'),
                             comment: _t('Can not load the Selected Order because the POS is currently offline'),
                         });
@@ -273,7 +278,7 @@ odoo.define('pos_order_load', function (require) {
                 }
                 // Forbid POS Order loading if some products are unknown
                 if (unknown_products.length > 0){
-                    self.pos_widget.screen_selector.show_popup(
+                    self.gui.show_popup(
                         'error-traceback', {
                             message: _t('Unknown Products'),
                             comment: _t('Unable to load some order lines because the ' +
@@ -289,14 +294,14 @@ odoo.define('pos_order_load', function (require) {
             }).fail(function (error, event){
                 if (parseInt(error.code) === 200) {
                     // Business Logic Error, not a connection problem
-                    self.pos_widget.screen_selector.show_popup(
+                    self.gui.show_popup(
                         'error-traceback', {
                             message: error.data.message,
                             comment: error.data.debug
                         });
                 }
                 else{
-                    self.pos_widget.screen_selector.show_popup('error',{
+                    self.gui.show_popup('error',{
                         message: _t('Connection error'),
                         comment: _t('Can not execute this action because the POS is currently offline'),
                     });
@@ -314,7 +319,7 @@ odoo.define('pos_order_load', function (require) {
             }).fail(function (error, event){
                 if (parseInt(error.code) === 200) {
                     // Business Logic Error, not a connection problem
-                    self.pos_widget.screen_selector.show_popup(
+                    self.gui.show_popup(
                         'error-traceback', {
                             message: error.data.message,
                             comment: error.data.debug
@@ -322,7 +327,7 @@ odoo.define('pos_order_load', function (require) {
                     );
                 }
                 else{
-                    self.pos_widget.screen_selector.show_popup('error',{
+                    self.gui.show_popup('error',{
                         message: _t('Connection error'),
                         comment: _t('Can not execute this action because the POS is currently offline'),
                     });
