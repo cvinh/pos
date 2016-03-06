@@ -76,5 +76,22 @@
             </div>
         </div>
     </t>
+    <t t-name="OrderDetailsWidget">
+        <tr>
+            <li>
+                <span class="product-name">
+                    <!--<t t-esc="line.product_id.display_name"/>-->
+                    <!--<t t-esc="line.get_product().display_name"/>-->
+                </span>
+                <span class="info-list">
+                    <!--<t t-esc="line.qty" />-->
+                </span>
+                <span class="price">
+                    <!--<t t-esc="widget.format_currency(line.price_unit)"/>-->
+                </span>
+            </li>
+        </tr>
+    </t>
+
 
 </template>

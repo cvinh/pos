@@ -99,22 +99,22 @@ odoo.define('pos_order_load', function (require) {
     /*************************************************************************
         Extend OrderWidget:
     */
-     var OrderWidget = screens.OrderWidget.extend({
-        renderElement: function(scrollbottom){
-            console.log(this);
-            this._super(scrollbottom);
-            if (this.chrome.load_button) {
-                this.chrome.load_button.appendTo(
-                    this.chrome.$('div.order-empty')
-                );
-            }
-            if (this.chrome.save_button && (this.pos.get('selectedOrder').get('orderLines').length > 0)) {
-                this.chrome.save_button.appendTo(
-                    this.chrome.$('div.summary')
-                );
-            }
-        }
-    });
+     //var OrderWidget = screens.OrderWidget.extend({
+        //renderElement: function(scrollbottom){
+            //console.log(this);
+            //this._super(scrollbottom);
+            //if (this.chrome.load_button) {
+                //this.chrome.load_button.appendTo(
+                    //this.chrome.$('div.order-empty')
+                //);
+            //}
+            //if (this.chrome.save_button && (this.pos.get('selectedOrder').get('orderLines').length > 0)) {
+                //this.chrome.save_button.appendTo(
+                    //this.chrome.$('div.summary')
+                //);
+            //}
+        //}
+    //});
 
     /*************************************************************************
         New ScreenWidget OrderListScreenWidget:
@@ -125,7 +125,7 @@ odoo.define('pos_order_load', function (require) {
     */
     var OrderListScreenWidget = screens.ScreenWidget.extend({
         template: 'OrderListScreenWidget',
-        show_leftpane: true,
+        //show_leftpane: true, TODO : deprecated... let the order visible on click
         model: 'pos.order',
         current_order_id: 0,
 
@@ -136,7 +136,7 @@ odoo.define('pos_order_load', function (require) {
         reset_order: function(order) {
             order.set_client(undefined);
             order.set_order_id(undefined);
-            order.get('orderLines').reset();
+            order.orderlines.reset();
             return order;
         },
 
@@ -144,13 +144,13 @@ odoo.define('pos_order_load', function (require) {
             var self = this;
             this._super();
             this.$el.find('span.button.back').click(function(){
-                order = self.pos.get('selectedOrder');
+                var order = self.pos.get('selectedOrder');
                 self.reset_order(order);
                 self.screens.order_widget.change_selected_order();
                 self.gui.show_screen('products');
             });
             this.$el.find('span.button.validate').click(function(){
-                var orderModel = new Model('pos.order');
+                var orderModel = new Model(this.model);
                 return orderModel.call('unlink', [[self.current_order_id]])
                 .then(function (result) {
                     self.gui.show_screen('products');
@@ -213,6 +213,20 @@ odoo.define('pos_order_load', function (require) {
             };
         },
 
+        // Display order details
+        render_orderline: function(orderline){
+            var el_str  = QWeb.render('OrderDetailsWidget',{widget:this, line:orderline}); 
+            //var el_str  = QWeb.render('OrderListScreenWidget',{widget:this, line:orderline}); 
+            var el_node = document.createElement('div');
+            el_node.innerHTML = _.str.trim(el_str);
+            el_node = el_node.childNodes[0];
+            el_node.orderline = orderline;
+
+            orderline.node = el_node;
+            return el_node;
+        },
+        // End display
+
         load_order: function(order_id) {
             var self = this;
             var orderModel = new Model(this.model);
@@ -224,7 +238,6 @@ odoo.define('pos_order_load', function (require) {
                 order.orderlines.reset();
                 var orderlines = result.orderlines || [];
                 var unknown_products = [];
-                var last_orderline;
                 for (var i=0, len=orderlines.length; i<len; i++) {
                     var orderline = orderlines[i];
                     var product_id = orderline.product_id[0];
@@ -247,7 +260,10 @@ odoo.define('pos_order_load', function (require) {
                     order.add_product(product,
                         self.prepare_orderline_options(orderline)
                     );
-                    last_orderline = order.get_last_orderline();
+                    //Call display orderlines
+                    self.render_orderline(orderline);
+                    //End display
+                    var last_orderline = order.get_last_orderline();
                     last_orderline = jQuery.extend(last_orderline, orderline);
                 }
                 // Forbid POS Order loading if some products are unknown
@@ -315,6 +331,7 @@ odoo.define('pos_order_load', function (require) {
             if (this.gui.get_current_screen() == 'orderlist') {
                 this.load_orders();
             }
+            //this.gui.show_screen('orderdetails');
         },
 
         on_click_draft_order: function(event){
@@ -355,6 +372,24 @@ odoo.define('pos_order_load', function (require) {
     gui.define_screen({
         'name': 'orderlist',
         'widget': OrderListScreenWidget,
+    });
+
+    /*************************************************************************
+        New ScreenWidget OrderDetails:
+            * On show, display all draft orders;
+            * on click on an order, display the content;
+            * on click on 'validate', allow to use this POS Order;
+            * on click on 'cancel', display the preview screen;
+    */
+    var OrderDetailsWidget = screens.ScreenWidget.extend({
+        template: 'OrderDetailsWidget',
+        model: 'pos.order',
+
+
+    });
+    gui.define_screen({
+        'name': 'orderdetails',
+        'widget': OrderDetailsWidget,
     });
 
 })
