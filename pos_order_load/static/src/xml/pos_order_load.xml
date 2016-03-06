@@ -1,14 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<template>
+<template id="template" xml:space="preserve">
 
     <t t-name="LoadButtonWidget">
-        <button class="order-load">Load Draft Order</button>
+        <span class="control-button order-load">
+            <i class="fa fa-cutlery"></i>
+            Load Draft Order
+        </span>
     </t>
 
     <t t-name="SaveButtonWidget">
-        <li class="orderline">
-            <button class="order-save">Save Current Order</button>
-        </li>
+        <span class="control-button order-save">
+            <i class="fa fa-cutlery"></i>
+            Save Current Order
+        </span>
     </t>
 
     <t t-name="LoadOrderLine">

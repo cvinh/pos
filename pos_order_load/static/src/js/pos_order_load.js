@@ -22,6 +22,7 @@ odoo.define('pos_order_load', function (require) {
     var chrome = require('point_of_sale.chrome');
     var gui = require('point_of_sale.gui');
     var screens = require('point_of_sale.screens');
+    var Model = require('web.DataModel');
     var core = require('web.core');
     var QWeb = core.qweb;
     var _t = core._t;
@@ -49,15 +50,11 @@ odoo.define('pos_order_load', function (require) {
         New Widget LoadButtonWidget:
             * On click, display a new screen to select draft orders;
     */
-    var LoadButtonWidget = PosBaseWidget.extend({
+    var LoadButtonWidget = screens.ActionButtonWidget.extend({
         template: 'LoadButtonWidget',
 
-        renderElement: function() {
-            var self = this;
-            this._super();
-            this.$el.click(function(){
-                this.gui.show_screen('orderlist');
-            });
+        button_click: function() {
+            this.gui.show_screen('orderlist');
         },
     });
 
@@ -65,22 +62,18 @@ odoo.define('pos_order_load', function (require) {
         New Widget SaveButtonWidget:
             * On click, save the current draft order;
     */
-     var SaveButtonWidget = PosBaseWidget.extend({
+     var SaveButtonWidget = screens.ActionButtonWidget.extend({
         template: 'SaveButtonWidget',
 
-        renderElement: function() {
-            var self = this;
-            this._super();
-            this.$el.click(function(){
-                self.gui.show_popup('confirm',{
-                    message: _t('Save The current Order ?'),
-                    comment: _t('This operation will save the current order in a draft state. You\'ll have to mark it as paid after.'),
-                    confirm: function(){
-                        var currentOrder = this.pos.get('selectedOrder');
-                        this.pos.push_order(currentOrder);
-                        self.pos.get('selectedOrder').destroy();
-                    },
-                });
+        button_click: function() {
+            this.gui.show_popup('confirm',{
+                message: _t('Save The current Order ?'),
+                comment: _t('This operation will save the current order in a draft state. You\'ll have to mark it as paid after.'),
+                confirm: function(){
+                    var currentOrder = this.pos.get('selectedOrder');
+                    this.pos.push_order(currentOrder);
+                    this.pos.get('selectedOrder').destroy();
+                },
             });
         },
     });
@@ -88,30 +81,19 @@ odoo.define('pos_order_load', function (require) {
 
     /*************************************************************************
         Extend Pos_Widget:
-            * Create new screen;
             * Add load and save button;
     */
-    chrome = chrome.Chrome.extend({
-        build_widgets: function() {
-            console.log();
-            this._super();
+    screens.define_action_button({
+        'name': 'order-save',
+        'widget': SaveButtonWidget,
 
-            // New Screen to select Draft Orders
-            this.orderlist_screen = new OrderListScreenWidget(this, {});
-            this.orderlist_screen.appendTo(this.$('.screens'));
-            this.orderlist_screen.hide();
-
-            this.gui.show_screen['orderlist'] =
-                this.orderlist_screen;
-
-            // Add buttons
-            this.load_button = new LoadButtonWidget(this,{});
-            this.load_button.appendTo(this.chrome.$('div.order-empty'));
-
-            this.save_button = new SaveButtonWidget(this,{});
-
-        },
     });
+    screens.define_action_button({
+        'name': 'order-load',
+        'widget': LoadButtonWidget,
+
+    });
+
 
 
     /*************************************************************************
@@ -119,7 +101,7 @@ odoo.define('pos_order_load', function (require) {
     */
      var OrderWidget = screens.OrderWidget.extend({
         renderElement: function(scrollbottom){
-            console.log();
+            console.log(this);
             this._super(scrollbottom);
             if (this.chrome.load_button) {
                 this.chrome.load_button.appendTo(
@@ -159,7 +141,6 @@ odoo.define('pos_order_load', function (require) {
         },
 
         start: function() {
-            console.log();
             var self = this;
             this._super();
             this.$el.find('span.button.back').click(function(){
@@ -169,7 +150,7 @@ odoo.define('pos_order_load', function (require) {
                 self.gui.show_screen('products');
             });
             this.$el.find('span.button.validate').click(function(){
-                var orderModel = new instance.web.Model('pos.order');
+                var orderModel = new Model('pos.order');
                 return orderModel.call('unlink', [[self.current_order_id]])
                 .then(function (result) {
                     self.gui.show_screen('products');
@@ -234,20 +215,22 @@ odoo.define('pos_order_load', function (require) {
 
         load_order: function(order_id) {
             var self = this;
-            var orderModel = new instance.web.Model(this.model);
+            var orderModel = new Model(this.model);
             return orderModel.call('load_order', [order_id])
             .then(function (result) {
                 var order = self.pos.get('selectedOrder');
                 var result = result[0];
                 order = self.load_order_fields(order, result);
-                order.get('orderLines').reset();
+                order.orderlines.reset();
                 var orderlines = result.orderlines || [];
                 var unknown_products = [];
+                var last_orderline;
                 for (var i=0, len=orderlines.length; i<len; i++) {
                     var orderline = orderlines[i];
                     var product_id = orderline.product_id[0];
                     var product_name = orderline.product_id[1];
                     var product = self.pos.db.get_product_by_id(product_id);
+                    var key;
                     if (_.isUndefined(product)) {
                         unknown_products.push(product_name);
                         continue;
@@ -261,10 +244,10 @@ odoo.define('pos_order_load', function (require) {
                         }
                     }
 
-                    order.addProduct(product,
+                    order.add_product(product,
                         self.prepare_orderline_options(orderline)
                     );
-                    last_orderline = order.getLastOrderline();
+                    last_orderline = order.get_last_orderline();
                     last_orderline = jQuery.extend(last_orderline, orderline);
                 }
                 // Forbid POS Order loading if some products are unknown
@@ -303,7 +286,7 @@ odoo.define('pos_order_load', function (require) {
 
         load_orders: function(query) {
             var self = this;
-            var orderModel = new instance.web.Model(this.model);
+            var orderModel = new Model(this.model);
             return orderModel.call('search_read_orders', [query || ''])
             .then(function (result) {
                 self.render_list(result);
@@ -365,6 +348,13 @@ odoo.define('pos_order_load', function (require) {
             this.$('.searchbox input').focus();
         },
 
+    });
+    /*************************************************************************
+            * Create new screen;
+    */
+    gui.define_screen({
+        'name': 'orderlist',
+        'widget': OrderListScreenWidget,
     });
 
 })
